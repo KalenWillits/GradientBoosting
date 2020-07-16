@@ -174,6 +174,7 @@ y_pred = gb.predict(X)
 
 predicitons = pd.DataFrame(y_pred)
 predicitons.index.rename('PassengerId', inplace=True)
+predicitons.reset_index(inplace=True)
 predicitons.columns = ['Survived']
 predicitons.shape
 
