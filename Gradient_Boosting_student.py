@@ -104,8 +104,12 @@ plt.show()
 # **<font color='teal'>Use pandas read csv to load in the Titantic data set into a dataframe called df.</font>**
 # %% codecell
 cd_data = 'data/'
-csv = 'titanictrain.csv'
-df = pd.read_csv(cd_data+csv)
+train = 'titanictrain.csv'
+test = 'titanictest.csv'
+df_train = pd.read_csv(cd_data+train)
+df_test = pd.read_csv(cd_data+test)
+df = pd.concat([df_train, df_test])
+df.head()
 # %% markdown
 # **<font color='teal'>Print the levels of the categorical data using 'select_dtypes'. </font>**
 # %% codecell
@@ -120,17 +124,24 @@ df.head()
 # **<font color='teal'>Print the null values for each column in the dataframe.</font>**
 # %% codecell
 print(df.isnull().sum())
+
+
 plt.hist(df['Age']) # Identifying the distribution
 np.random.seed(1111)
-df['Age'] = df.fillna(pd.Series(np.random.chisquare(df['Age']))) # Filling in with bootstrapping
+df['Age'] = df.fillna(np.mean(df['Age']))
+df['Fare'] = df.fillna(np.mean(df['Fare']))
+df['Survived'] = df.fillna(float(np.random.randint(1)))
+
 # %% markdown
 # **<font color='teal'>Create the X and y matrices from the dataframe, where y = df.Survived </font>**
 # %% codecell
 df.columns
-X_columns = ['Pclass', 'Age', 'SibSp', 'Parch', 'Fare', 'Sex_female',
+X_columns = ['Survived', 'Pclass', 'Age', 'SibSp', 'Parch', 'Fare', 'Sex_female',
        'Sex_male', 'Embarked_C', 'Embarked_Q', 'Embarked_S']
 X = df[X_columns]
 y = df['Survived']
+# X = df_train
+# y = df_test
 # %% markdown
 # **<font color='teal'>Apply the standard scaler to the X matrix.</font>**
 # %% codecell
@@ -140,38 +151,39 @@ X_scaled = scaler.transform(X)
 # **<font color='teal'>Split the X_scaled and y into 75/25 training and testing data subsets..</font>**
 # %% codecell
 from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
 # %% markdown
 # **<font color='teal'>Run the cell below to test multiple learning rates in your gradient boosting classifier.</font>**
 # %% codecell
 learning_rates = [0.05, 0.1, 0.25, 0.5, 0.75, 1]
 for learning_rate in learning_rates:
     gb = GradientBoostingClassifier(n_estimators=20, learning_rate = learning_rate, max_features=2, max_depth = 2, random_state = 0)
-    gb.fit(X_train, y_train)
+    gb.fit(X, y)
     print("Learning rate: ", learning_rate)
-    print("Accuracy score (training): {0:.3f}".format(gb.score(X_train, y_train)))
-    print("Accuracy score (validation): {0:.3f}".format(gb.score(X_test, y_test)))
+    print("Accuracy score (training): {0:.3f}".format(gb.score(X, y)))
+    print("Accuracy score (validation): {0:.3f}".format(gb.score(X, y)))
     print()
 # %% markdown
 # **<font color='teal'>Apply the best learning rate to the model fit and make some predictions. If you like, you can also calculate the ROC for your model. To evaluate your model, submit it to the (now very famous) [Kaggle competition](https://www.kaggle.com/c/titanic/) that Professor Spiegelhalter references in Chapter 5 of The Art of Statistics.</font>**
 # %% codecell
-gb = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.1, max_features=2, max_depth = 2, random_state = 0)
-gb.fit(X_train, y_train)
+gb = GradientBoostingClassifier(n_estimators=20, learning_rate = 0.056, max_features=2, max_depth = 2, random_state = 0)
+gb.fit(X, y)
 
-y_pred = gb.predict(X_test)
+y_pred = gb.predict(X)
 
 
 predicitons = pd.DataFrame(y_pred)
+predicitons.index.rename('PassengerId', inplace=True)
 predicitons.columns = ['Survived']
 predicitons.shape
 
 predicitons.to_csv('output/pred.csv', index=False)
-roc_curve(y_test, y_pred)
+roc_curve(y, y_pred)
 
-accuracy = str(round(sum(y_pred == y_test) / len(y_test), 6)*100)+'%'
+accuracy = str(round(sum(y_pred == y) / len(y), 6)*100)+'%'
 print(accuracy)
 plt.hist(y_pred, color='blue', alpha=0.5, bins=2, label='Predicition')
-plt.hist(y_test, color='red', alpha=0.5, bins=2, label='Test')
+plt.hist(y, color='red', alpha=0.5, bins=2, label='Test')
 plt.xticks([0,1])
 plt.title('Predicition VS Test')
 plt.xlabel('Survived')
@@ -179,3 +191,5 @@ plt.ylabel('Value Counts')
 plt.text(-0.09, 150, 'Accuracy: '+str(accuracy))
 plt.legend()
 plt.savefig('figures/HistTitanicPredVSTest.png')
+
+print(len(predicitons))
